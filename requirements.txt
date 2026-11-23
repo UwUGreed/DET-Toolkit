@@ -2,5 +2,5 @@ tweepy
 scapy
 pysocks
 dnslib
-pycrypto
+pycryptodome
 slackclient

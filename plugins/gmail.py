@@ -59,8 +59,8 @@ def listen():
                     # print data
                     try:
                         app_exfiltrate.retrieve_data(base64.b64decode(data))
-                    except Exception, e:
-                        print e
+                    except Exception as e:
+                        print(e)
                 else:
                     continue
         time.sleep(2)
