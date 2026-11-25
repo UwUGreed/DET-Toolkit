@@ -12,7 +12,34 @@ DET was developed as a proof of concept for evaluating data loss prevention (DLP
 | --- | --- |
 | Python 3 | Port used for the classroom project |
 | HTTP plugin | Worked in the local classroom lab. The recovered file matched the original byte for byte. |
-| Other plugins | Included from upstream. End-to-end compatibility is unverified. |
+| Core transports | Python 3 byte, base64, MIME, and hex conversions are ported |
+| New lab transports | HTTPS, DNS TXT, WebSocket, S3-compatible storage, database, and proxy plugins are included; live compatibility is environment-dependent and unverified |
+
+## Transport plugins
+
+The repository includes the original transports (`http`, `dns`, `gmail`,
+`google_docs`, `icmp`, `slack`, `tcp`, `twitter`, and `udp`) plus these
+additional lab-oriented transports:
+
+| Plugin | Intended lab use | External service or dependency |
+| --- | --- | --- |
+| `https` | HTTPS POSTs with headers, paths, user agents, and chunking | `requests` |
+| `dns_txt` | DNS TXT queries carrying encoded test data | `dnslib` |
+| `websocket` | Long-lived WebSocket sessions | `websocket-client` |
+| `cloud_storage` | Uploads to S3-compatible storage such as MinIO | `boto3` |
+| `database` | Inserts into an authorized PostgreSQL or MySQL lab database | `psycopg2-binary` or `mysql-connector-python` |
+| `proxy` | HTTP requests routed through an explicit proxy | `requests` |
+
+The new transports are disabled by default in `config-sample.json` and
+`config-demo.json`. To use one, configure its local lab endpoint, confirm the
+`allowed_hosts` or equivalent destination settings, and set its `enabled` value
+to `true`. Database users must also create the configured destination table
+before sending test data. Do not enable a transport against a service you do
+not own or have explicit permission to test.
+
+Install dependencies with:
+
+    python3 -m pip install -r requirements.txt
 
 ## Repository layout
 
@@ -21,7 +48,8 @@ DET was developed as a proof of concept for evaluating data loss prevention (DLP
 | `det.py` | Main Python 3 application |
 | `plugins/` | Transport plugins |
 | `requirements.txt` | Python dependencies |
-| `config-sample.json` | Upstream configuration reference |
+| `config-sample.json` | Configuration reference with all transport fields |
+| `config-demo.json` | Local demonstration configuration template |
 
 Keep local configurations, credentials, captured traffic, and recovered files out of version control.
 

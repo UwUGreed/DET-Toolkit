@@ -4,3 +4,8 @@ pysocks
 dnslib
 pycryptodome
 slackclient
+requests
+websocket-client
+boto3
+psycopg2-binary
+mysql-connector-python

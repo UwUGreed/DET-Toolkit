@@ -41,6 +41,64 @@
             "api_token": "xoxb-XXXXXXXXXXX",
             "chan_id": "XXXXXXXXXXX",
             "bot_id": "<@XXXXXXXXXXX>:"
+        },
+        "https": {
+            "enabled": false,
+            "target": "https://127.0.0.1:8443",
+            "path": "/collect",
+            "allowed_hosts": ["127.0.0.1", "localhost"],
+            "headers": {},
+            "user_agent": "DET-Lab/1.0",
+            "chunk_size": 1024,
+            "timeout": 10,
+            "proxies": {}
+        },
+        "dns_txt": {
+            "enabled": false,
+            "target": "127.0.0.1",
+            "port": 5353,
+            "domain": "det.lab",
+            "chunk_size": 40
+        },
+        "websocket": {
+            "enabled": false,
+            "target": "ws://127.0.0.1:8765/collect",
+            "headers": {},
+            "timeout": 10
+        },
+        "cloud_storage": {
+            "enabled": false,
+            "endpoint_url": "http://127.0.0.1:9000",
+            "region": "us-east-1",
+            "access_key": "minioadmin",
+            "secret_key": "minioadmin",
+            "bucket": "det-lab",
+            "prefix": "det-lab"
+        },
+        "database": {
+            "enabled": false,
+            "engine": "postgresql",
+            "dsn": "dbname=det_lab user=det password=det host=127.0.0.1 port=5432",
+            "connection": {
+                "host": "127.0.0.1",
+                "port": 3306,
+                "user": "det",
+                "password": "det",
+                "database": "det_lab"
+            },
+            "table": "det_lab_packets"
+        },
+        "proxy": {
+            "enabled": false,
+            "target": "http://127.0.0.1:8080",
+            "path": "/collect",
+            "allowed_hosts": ["127.0.0.1", "localhost"],
+            "proxies": {
+                "http": "http://127.0.0.1:3128",
+                "https": "http://127.0.0.1:3128"
+            },
+            "headers": {},
+            "timeout": 10
         }
     },
     "AES_KEY": "THISISACRAZYKEY",
