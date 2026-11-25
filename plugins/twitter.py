@@ -54,7 +54,10 @@ def send(data):
     global api
     if (not api):
         start_twitter()
-    api.send_direct_message(user=USERNAME, text=base64.b64encode(data))
+    payload = base64.b64encode(
+        data.encode('utf-8') if isinstance(data, str) else data
+    ).decode('ascii')
+    api.send_direct_message(user=USERNAME, text=payload)
 
 
 def listen():
